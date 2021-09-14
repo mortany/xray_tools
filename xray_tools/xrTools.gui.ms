@@ -10,6 +10,7 @@ utility xrayUtilites "x-ray tools"
 (
 	button ImpObjBtn "Import object" width:120
 	button ExpObjBtn "Export object" width:120
+	button InvalidObjBtn "Check invalids" width:120
 	button LoadSklsBtn "Load motion" width:120
 	button ExportMotionBtn "Export motion" width:120
 	button AnmIOBtn "*.anm i/o" width:120
@@ -20,6 +21,8 @@ utility xrayUtilites "x-ray tools"
 		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xrTools.ObjectImport.ms"))
 	on ExpObjBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xrTools.ObjectExport.ms") quiet:true) 
 		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xrTools.ObjectExport.ms"))
+	on InvalidObjBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xray_invalid_model_check.ms") quiet:true) 
+		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xray_invalid_model_check.ms"))
 	on LoadSklsBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xrTools.LoadMotion.ms") quiet:true) 
 		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xrTools.LoadMotion.ms"))
 	on ExportMotionBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xrTools.ExportMotion.ms") quiet:true) 
