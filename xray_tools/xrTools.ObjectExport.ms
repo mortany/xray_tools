@@ -607,6 +607,11 @@ fn export_object f sobj ExportSkinMode ExportRigidMode =
 		dm = try (mat.diffuseMap) catch (undefined)
 		dfile = "mtl\\mtl_rja_01"
 		
+		if classof mat == PhysicalMaterial and dm == undefined then
+		(
+			dm = try (mat.base_color_map) catch (undefined)
+		)
+
 		if dm != undefined then
 		(
 			dfile = if dm.filename != undefined then getfilenamefile dm.filename else "mtl_rja_01"
