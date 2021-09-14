@@ -1,0 +1,3 @@
+[rename_textures_list]
+ed\ed_actor = ed\ed_not_existing_texture
+mtl\mtl_barrel_06 = ed\ed_not_existing_texture

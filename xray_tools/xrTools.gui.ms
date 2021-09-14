@@ -85,6 +85,7 @@ utility xrayUtilites "x-ray tools"
 		button RagDollBtn "ragdoll helper" width:120 align:#center
 		--button AttachWeaponBtn "attach weapon" width:120 align:#center
 		button RunningMobBtn "running mob :)" width:120 align:#center
+		button MaterialUtilsBtn "Material utils" width:120 align:#center
 	)
 	
 	--on ShowLinksBtn pressed do
@@ -112,6 +113,9 @@ utility xrayUtilites "x-ray tools"
 			
 	on RunningMobBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xrTools.running_mob.ms") quiet:true) 
 		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xrTools.running_mob.ms"))
+
+	on MaterialUtilsBtn pressed do try ( fileIn (scriptspath+"\\xray_tools\\xrTools.MaterialUtils.ms") quiet:true) 
+		catch (messagebox("file not founded " + scriptspath+"\\xray_tools\\xrTools.MaterialUtils.ms"))
 	
 	
 	--label txt_00 "-------------------------------" offset:[0,12]
