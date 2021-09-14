@@ -19,6 +19,8 @@ group "skin"
 (
 button export_skin_btn "export skin" width:160
 --checkbox ModelShaders "export models shaders" align:#left
+label LabelMotion "Motion Ref" align:#left
+edittext MotionPathTxt width:160 align:#left
 checkbox ExportShapes "export shapes" align:#left enabled:false
 )
 
@@ -95,7 +97,6 @@ fn GetSmoothByOpenEdge f obj =
 	
 	for i = 1 to obj.numfaces do
 	(
-		--FaceSG = getFaceSmoothGroup obj i
 		sg = 0
 		
 		for j = 1 to 3 do
@@ -868,6 +869,14 @@ fn export_object f sobj ExportSkinMode ExportRigidMode =
 	writebyte f 0
 	writelong f 0
 	
+	if MotionPathTxt.text != "" then
+	(
+		local motion = MotionPathTxt.text
+		local count_m = motion.count
+		writelong f 0x0924
+		writelong f (count_m+1)
+		writestring f motion
+	)
 	-------------
 	curOfs = ftell f
 	fseek f 4 #seek_set
