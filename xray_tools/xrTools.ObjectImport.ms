@@ -859,13 +859,9 @@ fn load_object f fname filesize LoadMesh LoadSkin =
 																
 																for i = 1 to NumVMREFS do
 																(
-																	if( XTable[i][1] != undefined) then 
-																	(
 																		j = XTable[i][1][1] + 1
 																		k = XTable[i][1][2] + 1
 																		meshop.setMapVert m 1 i VTable[j][k]
-																	)
-																		
 																)
 																
 															)																
