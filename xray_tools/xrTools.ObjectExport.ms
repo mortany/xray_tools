@@ -36,7 +36,7 @@ group ""
 (
 label lbl_0 "scale object" align:#left across:2
 spinner scale_value range:[0,100000,1] scale:.001 width:60 align:#right
-dropdownlist SGExportType items:#("Smoothing: Type #1", "Smoothing: Type #2") selection:1 tooltip:""
+dropdownlist SGExportType items:#("Smoothing: Type #1", "Smoothing: Type #2", "Smoothing: Normals") selection:1 tooltip:""
 )
 
 group "bone defaults"
@@ -88,6 +88,73 @@ fn GetSG v =
 	n
 )
 
+fn ExtractEditNormals normMod obj lodmesh = (
+	local faceVertNormals = #()
+	max modify mode
+	modpanel.setcurrentobject normMod node:obj
+	Print ( "ExtractEditNormals")
+	for faceId = 1 to lodmesh.numfaces do (
+		local rnormals = #()
+		for v = 1 to 3 do (
+			local normId = normMod.getnormalid faceId v
+			rnormals[v] = normMod.getnormal normId
+		)
+		append faceVertNormals rnormals
+	)
+
+	faceVertNormals
+)
+
+fn ExtractSGroupNormals lodmesh = (
+	Print ( "ExtractSGroupNormals")
+	local faceVertNormals = #()
+	for faceId = 1 to lodmesh.numfaces do (
+		local rnormals = meshop.getFaceRNormals lodmesh faceId
+		append faceVertNormals rnormals
+	)
+
+	faceVertNormals
+)
+
+fn ExtractSpecifiedNormals lodmesh = (
+	Print ( "ExtractSpecifiedNormals")
+	for faceId = 1 to lodmesh.numfaces collect (
+		for v = 1 to 3 collect (
+			local normId = nspec.GetNormalId lodmesh faceId v
+		
+			nspec.GetNormal lodmesh normId
+		)
+	)
+)
+
+--extracts per face vertex normals from mesh into array
+fn ExtractNormals lodnode lodmesh = (
+	local faceVertNormals = #()
+	
+	local tryAlt = true
+	
+	if nspec != undefined then (
+		local numNormals = nspec.GetNumNormals lodmesh
+		if numNormals > 0 then (
+			faceVertNormals = ExtractSpecifiedNormals lodmesh
+			tryAlt = false
+		)
+	)
+	else (
+		local normMod = util.GetModByClass lodnode Edit_Normals
+		if normMod != undefined then (
+			faceVertNormals = ExtractEditNormals normMod lodnode lodmesh
+			tryAlt = false
+		)
+	)
+
+	
+	if tryAlt then (
+		faceVertNormals = ExtractSGroupNormals lodmesh
+	)
+	
+	faceVertNormals
+)
 
 fn GetSmoothByOpenEdge f obj =
 (
@@ -128,6 +195,129 @@ fn GetSmoothByEdge2 f Sob =
 	
 	GetSmoothByOpenEdge f obj
 	delete obj
+)
+
+fn close_enough_p3 v1 v2 prec  = (
+	(close_enough v1.x v2.x prec) and (close_enough v1.y v2.y prec) and (close_enough v1.z v2.z prec)
+)
+
+fn SplitVertices mesh faceVertNormals = (
+	local numverts = mesh.numverts
+	local normals = #()   -- min. count = count of vertices, normals for duplicated verts are appended to the end
+	local uvs = #()     -- =||=
+
+	normals[numverts] = undefined
+	uvs[numverts] = undefined
+
+	local uvSupported = meshop.getMapSupport mesh 1
+
+	local splitVerts = #()
+	local extraVerts = #()
+	local fixFaces = #()
+
+	for i = 1 to mesh.numfaces do (
+		local vertIds = getFace mesh i
+		local rnormals = faceVertNormals[i]   --get normals for current face (1 per corner, => 3 in total)
+		if rnormals == undefined then rnormals = #([0,0,1], [0,0,1], [0,0,1])
+		
+
+		local newVertIds = copy vertIds
+
+		local tface
+		if uvSupported then (
+			tface = getTVFace mesh i
+		)
+
+		for v = 1 to 3 do (
+			local vertId = vertIds[v] as integer
+			local normal = rnormals[v]
+			local uv = [0,0,0]
+			if tface != undefined then (
+				uv = getTVert mesh (tface[v] as integer)
+			)
+
+			--if data for existing vert is empty, assign it
+			if normals[vertId] == undefined and uvs[vertId] == undefined then (
+				normals[vertId] = normal
+				uvs[vertId] = uv
+			)
+			else (  --data is not empty, we need to check if
+				local dupedVerts = #(vertId)
+				if splitVerts[vertid] != undefined then dupedVerts += splitVerts[vertId]
+
+				-- id of vertex where the same data was found,
+				-- -1 if the data differs, new vert has to be created
+				local foundId = -1
+
+				for dupVertId in dupedVerts while foundId == -1 do (
+					if close_enough_p3 normals[dupVertId] normal 6 then (
+						if close_enough_p3 uvs[dupVertId] uv 6 then (
+							--this vertex data is the same, no need to duplicate the vert!
+							foundId = dupVertId
+						)
+					)
+				)
+
+				-- data differs, I need new vertex!
+				if foundId == -1 then (
+					--split
+					append extraVerts vertId
+					local newVertId = numverts + extraVerts.count
+
+					if splitVerts[vertid] == undefined then splitVerts[vertid] = #()
+					append splitVerts[vertid] newVertId
+
+					append normals normal
+					append uvs uv
+
+					newVertIds[v] = newVertId
+				)
+				else if foundId != vertId then (  --if data is the same,
+					--just repoint face
+					newVertIds[v] = foundId
+				)
+			)
+		)
+
+		if newVertIds != vertIds then (
+			append fixFaces #(i, newVertIds)
+		)
+	)
+
+
+	setNumVerts mesh (numVerts + extraVerts.count) true
+
+	for i = 1 to extraVerts.count do (
+		local orgVertId = extraVerts[i]
+		local newVertId = numVerts + i   --numOrgVerts
+
+		local vert = getVert mesh orgVertId
+		setVert mesh newVertId vert
+	)
+
+	for fixFace in fixFaces do (
+		setFace mesh fixFace[1] fixFace[2]
+	)
+
+
+	-----apply per vertex uvs to mesh map channel
+	--format "uvs count % \n" uvs.count
+	setNumTVerts mesh uvs.count
+	for i = 1 to uvs.count do (
+		local uv = uvs[i]
+		if uv == undefined then uv = [0,0,0]
+
+		setTVert mesh i uv
+	)
+	------------------------------------
+
+
+	for i = 1 to normals.count do (
+		local normal = normals[i]
+		if normal == undefined then normal = [0,0,1]
+
+		setNormal mesh i normal
+	)
 )
 
 -------------------------------------------------------------------------------------------------------------------------------------------
@@ -255,15 +445,56 @@ fn write_single_mesh f sobj ExportSkinMode ExportRigidMode =
 		writelong f ((k.y as integer) - 1)
 	)
 	
-	writelong f 0x1013												-- EMESH_CHUNK_SG
-	writelong f (NumFaces*4)
-	
-	if SGExportType.selection == 1 then 
-		for i = 1 to NumFaces do writelong f (getsg (getFaceSmoothGroup obj i))
-	else
-		GetSmoothByEdge2 f obj
-	
-																	-- EMESH_CHUNK_VMREFS
+	if SGExportType.selection != 3 then
+	(
+		writelong f 0x1013	-- EMESH_CHUNK_SG
+		writelong f (NumFaces*4)
+		
+		if SGExportType.selection == 1 then 
+			for i = 1 to NumFaces do writelong f (getsg (getFaceSmoothGroup obj i))
+		else
+			GetSmoothByEdge2 f obj
+	)
+
+	if SGExportType.selection == 3 then
+	(
+		writelong f 0x1014	-- EMESH_CHUNK_NORMALS
+		writelong f (NumFaces*3*12)
+		local lodmesh = copy obj.mesh
+		local scl = scaleMatrix [scale_value.value,scale_value.value,scale_value.value]
+        local otrans = obj.objectTransform * inverse obj.transform * scl
+
+		local faceVertNormals = ExtractNormals obj lodmesh
+
+		if lodmesh.numverts > 0 then SplitVertices lodmesh faceVertNormals
+
+		--apply transformation
+        for vertId = 1 to lodmesh.numverts do (
+            local vert = getVert lodmesh vertId
+            setVert lodmesh vertId (vert * otrans)
+
+            --rotate normals
+            local normal = getNormal lodmesh vertId
+            setNormal lodmesh vertId (normal * otrans.rotationpart)
+        )
+
+		for i = 1 to NumFaces do
+		(
+			fv = getface lodmesh i ; swap fv.y fv.z
+
+			for v = 1 to 3 do
+			(
+				rnormals = getNormal lodmesh fv[v]
+
+				writefloat f rnormals.x
+		 		writefloat f rnormals.z
+		 		writefloat f rnormals.y
+			)
+			
+		)	
+	)
+
+	-- EMESH_CHUNK_VMREFS
 	writelong f 0x1008
 	local NumTVerts = getNumTVerts obj
 	tempSizeOfs1 = ftell f
