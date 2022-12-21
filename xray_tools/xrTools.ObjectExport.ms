@@ -460,11 +460,18 @@ fn write_single_mesh f sobj ExportSkinMode ExportRigidMode =
 	(
 		writelong f 0x1014	-- EMESH_CHUNK_NORMALS
 		writelong f (NumFaces*3*12)
-		local lodmesh = copy obj.mesh
+
+		local lodmodel = copy obj
+
+		resetxform lodmodel
+		collapsestack lodmodel
+
+		local lodmesh = copy lodmodel.mesh
+
 		local scl = scaleMatrix [scale_value.value,scale_value.value,scale_value.value]
         local otrans = obj.objectTransform * inverse obj.transform * scl
 
-		local faceVertNormals = ExtractNormals obj lodmesh
+		local faceVertNormals = ExtractNormals lodmodel lodmesh
 
 		if lodmesh.numverts > 0 then SplitVertices lodmesh faceVertNormals
 
@@ -491,7 +498,9 @@ fn write_single_mesh f sobj ExportSkinMode ExportRigidMode =
 		 		writefloat f rnormals.y
 			)
 			
-		)	
+		)
+
+		delete lodmodel
 	)
 
 	-- EMESH_CHUNK_VMREFS
@@ -564,6 +573,11 @@ fn write_single_mesh f sobj ExportSkinMode ExportRigidMode =
 							BoneTabIndex[bid] = VTable.count + 1
 							VTable[BoneTabIndex[bid]] = #()
 							TabNames[BoneTabIndex[bid]] = xrToolsUtil.renameBone (skinOps.GetBoneName SkinMod bid 0)
+
+							--local aName = skinOps.GetBoneName skinMod i 0
+        					--local inSkinUI = (execute ("$" + aName)).children[1].name
+
+							Print ( skinOps.GetBoneName SkinMod bid 0)
 						)
 						append VTable[BoneTabIndex[bid]] bw
 						append TableId[tfv[j]] (BoneTabIndex[bid] - 1)
@@ -692,6 +706,8 @@ fn write_single_mesh f sobj ExportSkinMode ExportRigidMode =
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 fn export_object f sobj ExportSkinMode ExportRigidMode =
 (
 	local obj, curOfs
@@ -871,7 +887,6 @@ fn export_object f sobj ExportSkinMode ExportRigidMode =
 		writelong f 0x0921																		-- BONES
 		local ChangeOffset_bones = ftell f	
 		writelong f 0
-		
 		for i = 1 to NumBones do
 		(
 			writelong f (i-1)	-- bone index
@@ -893,24 +908,36 @@ fn export_object f sobj ExportSkinMode ExportRigidMode =
 			(
 				SceneBoneName = skinOps.GetBoneName SkinMod i 0
 				bname = xrToolsUtil.renameBone (SceneBoneName)
-				bob = execute ("$'" + SceneBoneName + "'")
+
+				allTheBones = for obj in objects where (obj.name == SceneBoneName) collect obj
+
+				--bob = execute ("$'" + SceneBoneName + "'")
+
+				--Print ( allTheBones)
+				--Print ( "=======")
 				--pname = if bob.parent == undefined then "scene_root" else xrToolsUtil.renameBone(bob.parent.name)
 				--paro = bob.parent
 				
-				if bob.parent == undefined then
+				for obj in allTheBones do
 				(
-					pname = "scene_root"
-					paro = undefined
-				)
-				else
-				(
-					ParentInList = false
-					for j = 1 to NumBones do 
-						if (skinOps.GetBoneName SkinMod j 0) ==  bob.parent.name then (ParentInList = true; exit)
-					if ParentInList then
+					bob = obj
+					if obj.parent != undefined and paro == undefined then
 					(
-						pname = xrToolsUtil.renameBone(bob.parent.name)
-						paro = bob.parent
+						ParentInList = false
+						for j = 1 to NumBones do 
+							if (skinOps.GetBoneName SkinMod j 0) ==  obj.parent.name then (ParentInList = true; exit)
+						
+						if ParentInList and paro == undefined then
+						(
+							pname = xrToolsUtil.renameBone(obj.parent.name)
+							paro = obj.parent
+							exit
+						)
+						else
+						(
+							pname = "scene_root"
+							paro = undefined
+						)
 					)
 					else
 					(
@@ -918,6 +945,29 @@ fn export_object f sobj ExportSkinMode ExportRigidMode =
 						paro = undefined
 					)
 				)
+				--Print ( bob)
+				--Print ( "+++++++")
+				-- if bob.parent == undefined then
+				-- (
+				-- 	pname = "scene_root"
+				-- 	paro = undefined
+				-- )
+				-- else
+				-- (
+				-- 	ParentInList = false
+				-- 	for j = 1 to NumBones do 
+				-- 		if (skinOps.GetBoneName SkinMod j 0) ==  bob.parent.name then (ParentInList = true; exit)
+				-- 	if ParentInList then
+				-- 	(
+				-- 		pname = xrToolsUtil.renameBone(bob.parent.name)
+				-- 		paro = bob.parent
+				-- 	)
+				-- 	else
+				-- 	(
+				-- 		pname = "scene_root"
+				-- 		paro = undefined
+				-- 	)
+				-- )
 				--format "SceneBoneName % , bname % , bob % , pname %, paro %\n"  SceneBoneName bname bob pname paro
 			)
 			
