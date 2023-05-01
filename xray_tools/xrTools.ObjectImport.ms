@@ -810,12 +810,14 @@ fn load_object f fname filesize LoadMesh LoadSkin =
 																BoneNamesList = #() -- bone names table list
 																TabIndex = 1
 																
+																--format "NumTextureTables % \n" NumTextureTables
+
 																for i = 1 to NumTextureTables do
 																(
-																		UnkStr2 = readstring f --; format "\n\t\t(%)Table name = %\n" (i-1) UnkStr2
-																		TableType = readbyte f --; format "\t\tTable Type = %\n" TableType 
-																		TableID = readshort f --; format "\t\tTableID = %\n" TableID
-																		NumTVerts = readlong f --; format "\t\tNumTVerts = %\n" NumTVerts
+																		UnkStr2 = readstring f--; format "\n\t\t(%)Table name = %\n" (i-1) UnkStr2
+																		TableType = readbyte f--; format "\t\tTable Type = %\n" TableType 
+																		TableID = readshort f--; format "\t\tTableID = %\n" TableID
+																		NumTVerts = readlong f--; format "\t\tNumTVerts = %\n" NumTVerts
 																		VTable[i] = #()
 																		
 																		case TableType of
@@ -849,7 +851,8 @@ fn load_object f fname filesize LoadMesh LoadSkin =
 																		) -- case TableType 
 																)
 																
-																
+																if TexTabID2 == undefined then TexTabID2 = TexTabID1;
+
 																meshop.setNumMaps m 1
 																meshop.setMapSupport m 1 true
 																meshop.defaultMapFaces m 1
@@ -1069,13 +1072,20 @@ fn load_object f fname filesize LoadMesh LoadSkin =
 						
 						for pa in a do
 						(
+							--format "bone pa [%] \n" pa
+							--format "bone TexTabID1 [%] \n" TexTabID1
+							--format "bone TexTabID2 [%] \n" TexTabID2
+
 							if pa[1] == TexTabID1-1 then (skin_tid = TexTabID1 ; skin_vid = pa[2] + 1 ; continue)
-							if pa[1] == TexTabID2-1 then (skin_tid = TexTabID2 ; skin_vid = pa[2] + 1 ; continue)
+							if TexTabID2 != undefined then if pa[1] == TexTabID2-1 then (skin_tid = TexTabID2 ; skin_vid = pa[2] + 1 ; continue)
 							tid = pa[1] + 1
 							iid = pa[2] + 1 
 							
+							--format "bone tid iid [%] [%] \n" tid iid
+
 							if BoneNamesList[tid] != undefined then
 							(
+								--format "bone name % \n" BoneNamesList[tid]
 								w = VTable[tid][iid]
 								bid = 1
 								--for k = 1 to result[3].count do if (stricmp BoneNamesList[tid] result[3][k][1].name) == 0 then (bid = k ; exit)
